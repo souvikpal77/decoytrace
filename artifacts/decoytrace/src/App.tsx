@@ -261,21 +261,77 @@ function AlertTable({alerts,limit=6}:{alerts:Alert[];limit?:number}) {
 }
 function Dashboard({context}:{context:AppContext}) {
   const {state,runDemo,demoCaption,demoStep}=context;
-  const chartData=useMemo(()=>state.alerts.slice(0,14).reverse().map((a,i)=>({time:new Date(a.timestamp).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}),alerts:i+1,critical:a.severity==='Critical'?1:0})),[state.alerts]);
+  const chartData=useMemo(()=>{
+    const severityWeight:Record<Alert['severity'],number>={Low:-8,Medium:0,High:14,Critical:25};
+    return state.alerts.slice(0,14).reverse().map((alert,index)=>{
+      const naturalVariation=Math.sin(index*1.63)*12+Math.sin(index*.57)*7;
+      const smallJitter=(index*7)%9-4;
+      return {
+        time:new Date(alert.timestamp).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}),
+        signal:Math.round(Math.max(8,Math.min(96,42+naturalVariation+smallJitter+severityWeight[alert.severity]))),
+        severity:alert.severity,
+      };
+    });
+  },[state.alerts]);
   const decoyTriggers=state.decoys.reduce((sum,d)=>sum+d.triggerCount,0);
   const run=()=>runDemo();
-  return <Page context={context} eyebrow="Security operations / overview" title="Security Command Center" description="One view of the fictional Northstar environment. Watch a decoy catch suspicious movement before it reaches a protected asset." actions={<button className="btn btn-primary" onClick={run} data-testid="button-dashboard-demo"><Play size={14} fill="currentColor"/> {demoStep?'Replay auto demo':'Run auto demo'}</button>}>
+  return <Page context={context} eyebrow="Security operations / overview" title="Security Command Center" description="One view of the fictional Northstar environment. Watch a decoy catch suspicious movement before it reaches a protected asset." actions={<button className="btn btn-primary" onClick={run} data-testid="button-dashboard-demo"><Play size={14} fill="currentColor"/> {demoStep?'Replay Auto Demo':'Run Auto Demo'}</button>}>
     <div className="sim-banner" style={{marginBottom:16}}><ShieldAlert size={15}/> SIMULATION ONLY — NO REAL SYSTEMS ARE ATTACKED <span style={{marginLeft:'auto',fontWeight:400,letterSpacing:0}}>Browser-local · synthetic telemetry</span></div>
     {demoCaption&&<div className="callout" style={{marginBottom:15}}><Activity size={16}/><span data-testid="demo-caption-dashboard">{demoCaption}</span></div>}
     <div className="stat-grid">
       <Stat label="Protected nodes" value="10" meta="All fictional assets" icon={ShieldCheck} tone="green"/>
       <Stat label="Armed decoys" value={`${state.decoys.filter(d=>d.status==='Active').length} / ${state.decoys.length}`} meta="Files · credentials · servers" icon={Boxes} tone="orange" hint="Decoys are believable fictional assets designed to surface suspicious interactions."/>
       <Stat label="Decoy interactions" value={decoyTriggers} meta="Cumulative trigger count" icon={Zap} tone="cyan"/>
-      <Stat label="Risk score" value={`${state.risk}/100`} meta={state.contained?'Contained in simulation':'Based on synthetic signals'} icon={Activity} tone={state.risk>70?'red':'purple'} hint="Transparent teaching indicator from 0 to 100; synthetic severity and decoy events raise it. It is not a real risk assessment."/>
+      <Stat label="Risk score" value={`${state.risk}/100`} meta="Simulated threat severity" icon={Activity} tone={state.risk>70?'red':'purple'} hint="A simulated 0–100 measure of threat severity based on generated events. Containment status is shown separately."/>
     </div>
     <div className="grid-2">
-      <section className="panel"><div className="panel-head"><div><div className="panel-title">Alert activity</div><div className="panel-kicker">Recent synthetic signals over time</div></div><span className="badge cyan">LIVE SIM</span></div><div className="panel-body"><div className="chart-wrap"><ResponsiveContainer width="100%" height="100%"><AreaChart data={chartData} margin={{top:8,right:8,left:-22,bottom:0}}><defs><linearGradient id="alertFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#5bd8e8" stopOpacity={.25}/><stop offset="100%" stopColor="#5bd8e8" stopOpacity={0}/></linearGradient></defs><CartesianGrid stroke="#233243" strokeDasharray="3 6" vertical={false}/><XAxis dataKey="time" tick={{fill:'#718398',fontSize:9}} axisLine={false} tickLine={false}/><YAxis allowDecimals={false} tick={{fill:'#718398',fontSize:9}} axisLine={false} tickLine={false}/><ChartTooltip contentStyle={{background:'#111d2a',border:'1px solid #33475a',borderRadius:8,color:'#dce7f1',fontSize:11}}/><Area type="monotone" dataKey="alerts" stroke="#5bd8e8" strokeWidth={2} fill="url(#alertFill)" activeDot={{r:4,fill:'#5bd8e8'}}/></AreaChart></ResponsiveContainer></div><div className="muted" style={{fontSize:10}}>Local sample history + events from the active simulation</div></div></section>
-      <section className="panel"><div className="panel-head"><div><div className="panel-title">Risk posture {tip('A transparent synthetic 0–100 score for this demo. It summarizes generated events and is not a security product assessment.')}</div><div className="panel-kicker">Signal-weighted · local simulation only</div></div><Activity size={16} className="tone-purple"/></div><div className="panel-body"><div className="risk-score"><div className={`risk-score-num ${state.risk>70?'tone-red':'tone-cyan'}`}>{state.risk}</div><div><div style={{fontSize:13,fontWeight:600}}>{state.contained?'Threat contained':state.risk>70?'Elevated signal':'Low observed risk'}</div><div className="muted" style={{fontSize:10,marginTop:5}}>out of 100 synthetic points</div></div></div><div className="risk-bar" style={{margin:'17px 0 11px'}}><span style={{width:`${state.risk}%`}}/></div><div className="toolbar" style={{justifyContent:'space-between',fontSize:10}}><span className="tone-green">0 · quiet</span><span className="tone-orange">50 · watch</span><span className="tone-red">100 · critical</span></div><div className="callout" style={{marginTop:18}}><Shield size={15}/><span>Decoy telemetry offers an early warning layer. Real nodes remain fictional and are never contacted.</span></div></div></section>
+      <section className="panel">
+        <div className="panel-head">
+          <div><div className="panel-title">Alert activity</div><div className="panel-kicker">Synthetic signal intensity · normalized 0–100</div></div>
+          <span className="badge cyan">LIVE SIM</span>
+        </div>
+        <div className="panel-body">
+          <div className="chart-wrap">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={chartData} margin={{top:8,right:8,left:-22,bottom:0}}>
+                <defs><linearGradient id="alertFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#5bd8e8" stopOpacity={.2}/><stop offset="100%" stopColor="#5bd8e8" stopOpacity={0}/></linearGradient></defs>
+                <CartesianGrid stroke="#26384a" strokeDasharray="3 6" strokeOpacity={.62}/>
+                <XAxis dataKey="time" tick={{fill:'#8192a5',fontSize:9}} axisLine={false} tickLine={false} minTickGap={24}/>
+                <YAxis domain={[0,100]} ticks={[0,25,50,75,100]} tick={{fill:'#8192a5',fontSize:9}} axisLine={false} tickLine={false}/>
+                <ChartTooltip
+                  cursor={{stroke:'#526b82',strokeDasharray:'3 4',strokeOpacity:.65}}
+                  contentStyle={{background:'rgba(14,24,36,.98)',border:'1px solid #34495e',borderRadius:10,color:'#dce7f1',fontSize:11,boxShadow:'0 14px 32px rgba(0,0,0,.3)',padding:'10px 12px'}}
+                  labelStyle={{color:'#9aabbd',fontSize:10,marginBottom:4}}
+                  itemStyle={{color:'#75deea',fontSize:11,padding:'2px 0'}}
+                  labelFormatter={label=>`Local time · ${label}`}
+                  formatter={value=>[`${value}/100`,'Synthetic signal']}
+                />
+                <Area type="monotone" dataKey="signal" name="Signal intensity" stroke="#62d9e8" strokeWidth={2.2} fill="url(#alertFill)" dot={false} activeDot={{r:4,fill:'#83e8ef',stroke:'#10202b',strokeWidth:2}}/>
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+          <div className="chart-footnote"><span className="chart-key-dot"/> Synthetic telemetry from fictional alert severity · local timestamps</div>
+        </div>
+      </section>
+      <section className="panel">
+        <div className="panel-head">
+          <div><div className="panel-title">Risk score {tip('A simulated 0–100 measure of threat severity. It is not a real-world security rating; containment is tracked separately.')}</div><div className="panel-kicker">Threat severity · local simulation only</div></div>
+          <Activity size={16} className="tone-purple"/>
+        </div>
+        <div className="panel-body">
+          <div className="risk-score">
+            <div className={`risk-score-num ${state.risk>70?'tone-red':'tone-cyan'}`} data-testid="dashboard-risk-score">{state.risk}<span className="risk-score-denominator">/100</span></div>
+            <div className="risk-score-copy"><div className="risk-score-label">Simulated threat severity</div><div className="muted">Based on generated signals</div></div>
+          </div>
+          <div className="risk-bar" style={{margin:'17px 0 11px'}}><span style={{width:`${state.risk}%`}}/></div>
+          <div className="toolbar risk-scale"><span className="tone-green">0 · quiet</span><span className="tone-orange">50 · watch</span><span className="tone-red">100 · critical</span></div>
+          <div className="containment-row" data-testid="dashboard-containment-status">
+            <div className="containment-copy"><div className="containment-label">Containment status</div><div className="containment-note">{state.contained?'The simulated route has been isolated.':state.running?'Scenario is still in progress.':'No containment event has been simulated yet.'}</div></div>
+            <span className={`containment-pill ${state.contained?'contained':state.running?'running':'pending'}`}><span className="containment-dot"/>{state.contained?'CONTAINED':state.running?'IN PROGRESS':'NOT CONTAINED'}</span>
+          </div>
+          <div className="callout risk-note"><Shield size={15}/><span>Decoy telemetry offers an early warning layer. Real nodes remain fictional and are never contacted.</span></div>
+        </div>
+      </section>
     </div>
     <section className="panel section-gap"><div className="panel-head"><div><div className="panel-title">Recent alerts</div><div className="panel-kicker">{state.alerts.length} local entries · newest first</div></div><Link href="/incidents" className="btn btn-small btn-quiet" data-testid="link-all-incidents">View reconstruction <ArrowRight size={13}/></Link></div><AlertTable alerts={state.alerts} limit={5}/></section>
   </Page>;
@@ -343,8 +399,8 @@ function SimulatorPage({context}:{context:AppContext}) {
   const activeScenario=scenarios.find(s=>s.id===state.scenario)??scenarios[0];
   return <Page context={context} eyebrow="Scenario engine / local only" title="Attack Simulation Lab" description="Run a controlled, paced sequence of synthetic telemetry through the shared environment. No attack tooling or external network activity is involved." actions={<span className={`badge ${state.running?'orange':'green'}`}>{state.running?'Scenario running':'Ready to simulate'}</span>}>
     <div className="sim-banner" style={{marginBottom:16}}><ShieldAlert size={15}/> SIMULATION ONLY — NO REAL SYSTEMS ARE ATTACKED <span style={{marginLeft:'auto',fontWeight:400}}>Fictional data · browser state</span></div>
-    <div className="grid-2-even">
-      <section className="panel"><div className="panel-head"><div><div className="panel-title">Choose a scenario</div><div className="panel-kicker">A teaching narrative, not an attack playbook</div></div><Radar size={16} className="tone-cyan"/></div><div className="panel-body"><label htmlFor="scenario-select" className="muted" style={{fontSize:10}}>Scenario profile</label><select id="scenario-select" className="field" style={{marginTop:7}} value={state.scenario} disabled={state.running} onChange={e=>setState(s=>({...s,scenario:e.target.value}))} data-testid="select-scenario">{scenarios.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</select><div className="callout" style={{marginTop:14}}><BookOpen size={15}/><span>{activeScenario.detail}</span></div><div className="toolbar" style={{marginTop:18}}><button className="btn btn-primary" disabled={state.running} onClick={startSimulation} data-testid="button-start-simulation"><Play size={14} fill="currentColor"/> Start simulation</button><button className="btn btn-danger" disabled={!state.running} onClick={stopSimulation} data-testid="button-stop-simulation"><Square size={13} fill="currentColor"/> Stop</button><button className="btn" onClick={runDemo} data-testid="button-start-demo"><Zap size={14}/> Run paced auto demo</button></div><div className="section-gap" style={{borderTop:'1px solid var(--line)',paddingTop:15}}><div className="stat-top"><span>Simulation risk score {tip('A demonstration-only 0–100 indicator. It rises from generated signals; it is not a real security rating.')}</span><span className="mono-text">{state.risk} / 100</span></div><div className="risk-bar" style={{marginTop:9}}><span style={{width:`${state.risk}%`}}/></div></div></div></section>
+     <div className="grid-2-even">
+       <section className="panel"><div className="panel-head"><div><div className="panel-title">Choose a scenario</div><div className="panel-kicker">A teaching narrative, not an attack playbook</div></div><Radar size={16} className="tone-cyan"/></div><div className="panel-body"><label htmlFor="scenario-select" className="muted" style={{fontSize:10}}>Scenario profile</label><select id="scenario-select" className="field" style={{marginTop:7}} value={state.scenario} disabled={state.running} onChange={e=>setState(s=>({...s,scenario:e.target.value}))} data-testid="select-scenario">{scenarios.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</select><div className="callout" style={{marginTop:14}}><BookOpen size={15}/><span>{activeScenario.detail}</span></div><div className="toolbar" style={{marginTop:18}}><button className="btn btn-primary" disabled={state.running} onClick={startSimulation} data-testid="button-start-simulation"><Play size={14} fill="currentColor"/> Start simulation</button><button className="btn btn-danger" disabled={!state.running} onClick={stopSimulation} data-testid="button-stop-simulation"><Square size={13} fill="currentColor"/> Stop</button><button className="btn" onClick={runDemo} data-testid="button-start-demo"><Zap size={14}/> Run Auto Demo</button></div><div className="section-gap simulation-risk-summary"><div className="stat-top"><span>Risk score · simulated severity {tip('A demonstration-only 0–100 measure of simulated threat severity. Containment status is tracked separately.')}</span><span className="mono-text">{state.risk} / 100</span></div><div className="risk-bar" style={{marginTop:9}}><span style={{width:`${state.risk}%`}}/></div><div className="simulation-containment"><span>Containment status</span><span className={`containment-pill ${state.contained?'contained':state.running?'running':'pending'}`}><span className="containment-dot"/>{state.contained?'CONTAINED':state.running?'IN PROGRESS':'NOT CONTAINED'}</span></div></div></div></section>
       <section className="panel"><div className="panel-head"><div><div className="panel-title">Synthetic attack path</div><div className="panel-kicker">Only changes when this app simulates an event</div></div><GitBranch size={16} className="tone-orange"/></div><div className="panel-body">{state.path.length?<div style={{display:'grid',gap:10}}>{state.path.map((n,i)=><div key={`${n}-${i}`} className="toolbar" data-testid={`path-node-${i}`}><span className={`badge ${n.startsWith('DECOY')?'orange':'cyan'}`}>{String(i+1).padStart(2,'0')}</span><div><strong className="mono-text">{n}</strong><div className="muted" style={{fontSize:9,marginTop:3}}>{state.nodes.find(x=>x.name===n)?.role??'Synthetic decoy asset'}</div></div>{i<state.path.length-1&&<ArrowDownRight size={14} className="muted"/>}</div>)}</div>:<div className="empty-state"><GitBranch size={27} style={{marginBottom:10,opacity:.5}}/><div>Run a scenario to build the synthetic route.</div></div>}<div className="callout" style={{marginTop:15}}><LockKeyhole size={15}/><span>Routes never leave the browser. Protected nodes are fictional stand-ins.</span></div></div></section>
     </div>
     <section className="panel section-gap"><div className="panel-head"><div><div className="panel-title">Event terminal</div><div className="panel-kicker">{state.logs.length} local entries · newest first</div></div><span className="badge cyan"><span className="online-dot"/> LOCAL SESSION</span></div><div className="panel-body"><div className="terminal"><div className="terminal-bar"><span><Terminal size={12} style={{display:'inline',verticalAlign:'middle',marginRight:7}}/> decoytrace / synthetic event stream</span><span>READ-ONLY OUTPUT</span></div><div className="terminal-body">{state.logs.slice(0,35).map(log=><div className="terminal-line" key={log.id}><span className="terminal-time">{log.time}</span><span className={`terminal-msg ${log.tone}`}>{log.message}</span></div>)}<div className="terminal-line"><span className="terminal-time">{new Date().toLocaleTimeString()}</span><span className="terminal-msg">{state.running?'waiting for next event':'ready'} <i className="terminal-caret"/></span></div></div></div>{demoCaption&&<div className="callout" style={{marginTop:12}} role="status">{demoCaption}</div>}</div></section>
