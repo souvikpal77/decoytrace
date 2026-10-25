@@ -1,9 +1,11 @@
-# [Project name]
+# DECOYTRACE
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+A browser-only cyber deception simulation that demonstrates how fictional decoys can expose suspicious movement, generate an incident timeline, and detect changes to evidence records.
 
 ## Run & Operate
 
+- `pnpm --filter @workspace/decoytrace run dev` — run the DECOYTRACE web app
+- `pnpm --filter @workspace/decoytrace run typecheck` — typecheck the web app
 - `pnpm --filter @workspace/api-server run dev` — run the API server (port 5000)
 - `pnpm run typecheck` — full typecheck across all packages
 - `pnpm run build` — typecheck + build all packages
@@ -14,6 +16,8 @@ _Replace the heading above with the project's name, and this line with one sente
 ## Stack
 
 - pnpm workspaces, Node.js 24, TypeScript 5.9
+- DECOYTRACE frontend: React, Vite, TypeScript, Tailwind CSS, Recharts, Lucide React
+- DECOYTRACE state: browser React state and localStorage; SHA-256 via Web Crypto API
 - API: Express 5
 - DB: PostgreSQL + Drizzle ORM
 - Validation: Zod (`zod/v4`), `drizzle-zod`
@@ -22,23 +26,28 @@ _Replace the heading above with the project's name, and this line with one sente
 
 ## Where things live
 
-_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
+- `artifacts/decoytrace/src/App.tsx` — DECOYTRACE pages and shared interactions
+- `artifacts/decoytrace/src/simulation.ts` — fictional simulation data and logic
+- `artifacts/decoytrace/src/index.css` — DECOYTRACE theme and responsive styling
+- `lib/api-spec/openapi.yaml` — shared API contract
 
 ## Architecture decisions
 
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
+- DECOYTRACE is intentionally browser-only; its fictional scenario state is local and does not depend on the API server or database.
+- The evidence ledger is a blockchain-inspired local hash-chain demonstration, not a production integrity guarantee or real blockchain.
 
 ## Product
 
-_Describe the high-level user-facing capabilities of this app once they exist._
+- Explore a fictional network, manage simulated decoys, run attack scenarios, review reconstructed incidents, and verify or tamper with a local evidence ledger.
 
 ## User preferences
 
-_Populate as you build — explicit user instructions worth remembering across sessions._
+- DECOYTRACE must remain a simulation: never scan, connect to, monitor, or attack real systems; never use real credentials or real targets.
 
 ## Gotchas
 
-_Populate as you build — sharp edges, "always run X before Y" rules._
+- All app data stays in the current browser's localStorage; it is not shared between users or devices.
+- Fictional IP addresses and simulated MITRE ATT&CK mappings are explanatory sample data only.
 
 ## Pointers
 

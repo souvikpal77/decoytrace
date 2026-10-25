@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "DECOYTRACE"
+description = "A browser-only cyber deception simulation for exploring decoy detection, attack-path reconstruction, incident response, and SHA-256 evidence integrity using fictional data."
+version = "1.0.0"
+id = "artifacts/decoytrace"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 21392
+
+[services.development]
+run = "pnpm --filter @workspace/decoytrace run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/decoytrace", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/decoytrace/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "21392"
+BASE_PATH = "/"
